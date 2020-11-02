@@ -4,123 +4,101 @@ import java.io.*;
 import acm.program.*;
 import acm.util.ErrorException;
 
+import java.util.*;
+import acm.program.*;
+
 public class FlightPlanner extends ConsoleProgram {
-
-	// Instant variables
-	private HashMap<String, ArrayList<String>> flights;
-	private ArrayList<String> cities;
-
+	
+	/* Private instance variables */
+	private FlightDB flights; //creates a new database
+	private ArrayList<String> enteredCities = new ArrayList<String>(); //keeps track of entered cities
+	private String firstCity; //keeps track of the first city entered by the user
+	
+	public void init() {
+		//passes the text file to the database to read and parse
+		flights = new FlightDB("flights.txt");
+	}
+	
 	public void run() {
-		println("Welcome to Your Flight Planner!");
-		readFlightData("flights.txt");
-
-		println("Here is a list of all the cities in our database:");
-		printCityList(cities);
-
-		println("Let's plan a round-trip route!:");
-		String startCity = readLine("Enter the starting city: ");
-		ArrayList<String> route = new ArrayList<String>();
-		route.add(startCity);
-		String currentCity = startCity;
-
-		while (true) {
-			String nextCity = getNextCity(currentCity);
-			route.add(nextCity);
-			if (nextCity.equals(startCity))
+		welcome();
+		askForFistCity();
+		askForMoreCities();
+		printFinalRoute();
+	}
+	
+	/* Welcomes the user */
+	private void welcome() {
+		println("Welcome to Flight Planner");
+		println("Here is a list of all the cities in our database");
+		Iterator<String> it = flights.getCities();
+		while(it.hasNext()) {
+			println(" " + it.next());
+		}
+		println("Let's plan a round-trip route!");
+	}
+	
+	/* Asks the user for the starting city and prints out 
+	 * all the possible destination cities for that city */
+	private void askForFistCity() {
+		while(true) {
+			firstCity = readLine("Enter the starting city: ");
+			if(flights.ContainsKey(firstCity)) {
+				enteredCities.add(firstCity);
 				break;
-			currentCity = nextCity;
-
-		}
-
-		printRoute(route);
-
-	}
-
-	private void printRoute(ArrayList<String> route) {
-		println("The route you've chosen is: ");
-		for (int i = 0; i < route.size(); i++) {
-			if (i > 0)
-				print("->");
-			print(route.get(i));
-		}
-		println();
-
-	}
-
-	private String getNextCity(String city) {
-		ArrayList<String> destinations = getDestinations(city);
-		String nextCity = null;
-		while (true) {
-			println("From " + city + " you can fly directly to: ");
-			printCityList(destinations);
-			String promptUser = "Where do you want to go from " + city + "?";
-			nextCity = readLine(promptUser);
-			if (destinations.contains(nextCity))
-				break;
-			println("You can't get to that city by a direct flight");
-
-		}
-		return nextCity;
-	}
-
-	private ArrayList<String> getDestinations(String fromCity) {
-		return flights.get(fromCity);
-	}
-
-	private void printCityList(ArrayList<String> cityList) {
-		for (int i = 0; i < cityList.size(); i++) {
-			String city = cityList.get(i);
-			println(" " + city);
-
-		}
-	}
-
-	// method that reads the flight data text
-	private void readFlightData(String filename) {
-		flights = new HashMap<String, ArrayList<String>>();
-		cities = new ArrayList<String>();
-		try {
-			BufferedReader rd = new BufferedReader(new FileReader(filename));
-			while (true) {
-				String line = rd.readLine();
-				if (line == null)
-					break;
-				if (line.length() != 0) {
-					readFlightEntry(line);
+			}
+			else{
+				println("You can't get to that city by a direct flight.");
+				println("Here is a list of all the cities in our database");
+				Iterator<String> it = flights.getCities();
+				while(it.hasNext()) {
+					println(" " + it.next());
 				}
 			}
-			rd.close();
-
-		} catch (IOException ex) {
-			throw new ErrorException(ex);
-
 		}
-
+		println("From " + firstCity + " you can fly directly to:");
+		Iterator<String> it = flights.findRoute(firstCity);
+		while(it.hasNext()) {
+			println(" " + it.next());
+			}
 	}
-
-	// reading the line of fromCity -> toCity and adding each from city to ArrayList
-	// and HashMap
-	private void readFlightEntry(String line) {
-
-		int arrow = line.indexOf("->");
-		if (arrow == -1) {
-			throw new ErrorException("Invalid flight enter" + line);
+	
+	/* asks the user for the cities he/she wants to fly to, 
+	 * and prints out possible destination cities for each city
+	 * until the user enters the starting city */
+	private void askForMoreCities() {
+		String city = firstCity;
+		String lastCity = city;
+		while(true) {
+			city = readLine("Where do you want to go from " + city + "? ");
+			if(city.equals(firstCity)) {
+				break;
+			}
+			if(flights.ContainsKey(city) == true) {
+				lastCity = city;
+				enteredCities.add(city);
+				}
+			else{
+				city = lastCity;
+				println("You can't get to that city by a direct flight.");
+			}
+			println("From " + city + " you can fly directly to:");
+			Iterator<String> it = flights.findRoute(city);
+			while(it.hasNext()) {
+				println(" " + it.next());
+			}
+			
 		}
-
-		String fromCity = line.substring(0, arrow).trim();
-		String toCity = line.substring(arrow + 2).trim();
-		defineCity(fromCity);
-		defineCity(toCity);
-		getDestinations(fromCity).add(toCity);
-
 	}
-
-	private void defineCity(String cityName) {
-		if (!cities.contains(cityName)) {
-			cities.add(cityName);
-			flights.put(cityName, new ArrayList<String>());
+	
+	/* prints out the chosen route */
+	private void printFinalRoute() {
+		println("The route you've chosen is");
+		String route = enteredCities.get(0);
+		for(int i = 1; i<enteredCities.size(); i++) {
+			route += " -> " + enteredCities.get(i);
 		}
-
+		route += " -> " + enteredCities.get(0);
+		println(route);
 	}
-
+	
 }
